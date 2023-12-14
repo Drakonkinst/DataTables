@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "datatables",
+  "version": "${version}",
+  "name": "DataTables",
+  "description": "Lightweight library that adds data tables for data packs",
+  "authors": [
+    "Drakonkinst"
+  ],
+  "contact": {
+    "homepage": "https://fabricmc.net/",
+    "sources": "https://github.com/FabricMC/fabric-example-mod"
+  },
+  "license": "LGPL-2.1",
+  "icon": "assets/datatables/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "io.github.drakonkinst.datatables.DataTables"
+    ],
+    "client": [
+      "io.github.drakonkinst.datatables.DataTablesClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.1",
+    "minecraft": "~1.20.4",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
