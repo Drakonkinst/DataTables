@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.server.command.ServerCommandSource;
@@ -53,10 +54,12 @@ public class DataTables implements ModInitializer {
 
         // Register command
         CommandRegistrationCallback.EVENT.register(
-                (dispatcher, registryAccess, environment) -> DataTables.createCommands(dispatcher));
+                (dispatcher, registryAccess, environment) -> DataTables.createCommands(dispatcher,
+                        registryAccess));
     }
 
-    private static void createCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
-        TableCommand.register(dispatcher);
+    private static void createCommands(CommandDispatcher<ServerCommandSource> dispatcher,
+            CommandRegistryAccess registryAccess) {
+        TableCommand.register(dispatcher, registryAccess);
     }
 }

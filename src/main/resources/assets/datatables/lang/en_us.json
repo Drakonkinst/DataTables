@@ -1,5 +1,7 @@
 {
   "commands.table.list": "There are %s table(s): ",
   "commands.table.get.block": "The target block has %s for table '%s'",
+  "commands.table.get.entity": "%s has %s for table '%s'",
+  "commands.table.get.item": "The target item has %s for table '%s'",
   "commands.table.tableNotFound": "Unknown table '%s'"
 }
