@@ -3,9 +3,11 @@ package io.github.drakonkinst.datatables;
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import java.util.Collection;
 import java.util.Optional;
@@ -24,6 +26,8 @@ public class TableCommand {
         Collection<Identifier> dataTableIds = DataTableRegistry.INSTANCE.getDataTableIds();
         return CommandSource.suggestIdentifiers(dataTableIds.stream(), builder);
     };
+    private static final DynamicCommandExceptionType UNKNOWN_TABLE_EXCEPTION = new DynamicCommandExceptionType(
+            name -> Text.stringifiedTranslatable("commands.table.tableNotFound", name));
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(literal("table").requires(
@@ -39,32 +43,37 @@ public class TableCommand {
 
     private static int listTables(CommandContext<ServerCommandSource> context) {
         Collection<Identifier> dataTableIds = DataTableRegistry.INSTANCE.getDataTableIds();
-        StringBuilder str = new StringBuilder(
-                "There are " + dataTableIds.size() + " data tables currently loaded:");
+        boolean first = true;
+        StringBuilder str = new StringBuilder();
         for (Identifier id : dataTableIds) {
-            str.append(", ").append(id.toString());
+            if (first) {
+                first = false;
+                str.append(id.toString());
+            } else {
+                str.append(", ").append(id.toString());
+            }
         }
-        context.getSource().sendMessage(Text.literal(str.toString()));
-        return 1;
+        final String tableListStr = str.toString();
+        context.getSource()
+                .sendFeedback(() -> Text.translatable("commands.table.list", dataTableIds.size())
+                        .append(tableListStr), false);
+        return Command.SINGLE_SUCCESS;
     }
 
-    private static int getTableEntryForBlock(CommandContext<ServerCommandSource> context) {
-        BlockPos blockPos = null;
-        try {
-            blockPos = BlockPosArgumentType.getLoadedBlockPos(context, "pos");
-        } catch (CommandSyntaxException e) {
-            context.getSource().sendError(Text.literal("Coordinates must be in a loaded position"));
-        }
+    private static int getTableEntryForBlock(CommandContext<ServerCommandSource> context)
+            throws CommandSyntaxException {
+        BlockPos blockPos = BlockPosArgumentType.getLoadedBlockPos(context, "pos");
         Identifier id = IdentifierArgumentType.getIdentifier(context, "data_table_id");
         Optional<DataTable> table = DataTableRegistry.INSTANCE.getOptional(id);
         if (table.isEmpty()) {
-            context.getSource()
-                    .sendError(Text.literal("Table " + id.toString() + " does not exist"));
-            return 0;
+            throw UNKNOWN_TABLE_EXCEPTION.create(id.toString());
         }
         int value = table.get()
                 .getIntForBlock(context.getSource().getWorld().getBlockState(blockPos));
-        context.getSource().sendMessage(Text.literal("Returned value of " + value));
+        context.getSource()
+                .sendFeedback(
+                        () -> Text.translatable("commands.table.get.block", value, id.toString()),
+                        false);
         return value;
     }
 }

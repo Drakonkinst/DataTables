@@ -32,9 +32,13 @@ bin/
 
 run/
 
+# Don't commit test data tables
+/src/main/resources/data/datatables/data_tables/
+
 # java
 
 hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+
