@@ -87,8 +87,6 @@ public class DataTableRegistry extends JsonDataLoader implements
 
     public void resolveTags() {
         if (tagsResolved) {
-            DataTables.LOGGER.warn(
-                    "Attempting to resolve tags but tags should already be resolved, skipping");
             return;
         }
 

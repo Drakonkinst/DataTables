@@ -7,7 +7,7 @@ public class DataTablesClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        ClientPlayNetworking.registerGlobalReceiver(ModEventHandlers.DATA_TABLE_PACKET_ID,
+        ClientPlayNetworking.registerGlobalReceiver(DataTables.DATA_TABLE_PACKET_ID,
                 (client, handler, buf, responseSender) -> {
                     DataTableRegistry.INSTANCE.readPacket(buf);
                     DataTables.LOGGER.info(

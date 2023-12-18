@@ -19,6 +19,7 @@ import net.minecraft.util.math.BlockPos;
 
 public class TableCommand {
 
+    public static final int PERMISSION_LEVEL_GAMEMASTER = 2;
     private static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (context, builder) -> {
         Collection<Identifier> dataTableIds = DataTableRegistry.INSTANCE.getDataTableIds();
         return CommandSource.suggestIdentifiers(dataTableIds.stream(), builder);
@@ -26,7 +27,7 @@ public class TableCommand {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(literal("table").requires(
-                        source -> source.hasPermissionLevel(ModCommands.PERMISSION_LEVEL_GAMEMASTER))
+                        source -> source.hasPermissionLevel(PERMISSION_LEVEL_GAMEMASTER))
                 .then(literal("list").executes(TableCommand::listTables))
                 .then(literal("get").then(
                         argument("data_table_id", IdentifierArgumentType.identifier()).suggests(
