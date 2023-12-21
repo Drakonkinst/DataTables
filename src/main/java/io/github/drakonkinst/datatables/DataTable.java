@@ -148,13 +148,32 @@ public class DataTable {
         return failedTags;
     }
 
-    public int getIntForBlock(BlockState blockState) {
+    public boolean contains(Identifier id) {
+        return entryTable.containsKey(id);
+    }
+
+    public boolean contains(Item item) {
+        Identifier id = Registries.ITEM.getId(item);
+        return contains(id);
+    }
+
+    public boolean contains(Entity entity) {
+        Identifier id = EntityType.getId(entity.getType());
+        return contains(id);
+    }
+
+    public boolean contains(BlockState blockState) {
         Identifier id = Registries.BLOCK.getId(blockState.getBlock());
-        return this.getInt(id);
+        return contains(id);
     }
 
     public int getInt(Identifier id) {
         return entryTable.getInt(id);
+    }
+
+    public int getIntForItem(Item item) {
+        Identifier id = Registries.ITEM.getId(item);
+        return this.getInt(id);
     }
 
     public int getIntForEntity(Entity entity) {
@@ -162,8 +181,8 @@ public class DataTable {
         return this.getInt(id);
     }
 
-    public int getIntForItem(Item item) {
-        Identifier id = Registries.ITEM.getId(item);
+    public int getIntForBlock(BlockState blockState) {
+        Identifier id = Registries.BLOCK.getId(blockState.getBlock());
         return this.getInt(id);
     }
 

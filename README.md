@@ -31,6 +31,8 @@ Data tables can be placed at the path `data/<namespace>/data_tables`. Data table
 configuration of entries that map an identifier (for a block, entity, item, etc.) to an integer
 value. It also supports **tags**, which allows developers (found at `data/<namespace>/tags`) to
 specify entire groups of blocks easily. The `type` parameter determines how tags are processed.
+Adding identifiers that do not exist for that type still works! In fact, data tables can be applied
+to game elements outside of their type (though tags may not be parsed the same way).
 
 Like other data pack resources, these update every time `/reload` is called. Data packs can also
 append or override each other's data tables to change behavior or add blocks from another mod. For
