@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.resource.JsonDataLoader;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
@@ -38,22 +37,13 @@ public class DataTableRegistry extends JsonDataLoader implements
         INSTANCE = this;
     }
 
-    public void writePacket(PacketByteBuf buf) {
-        buf.writeVarInt(dataTables.size());
-        dataTables.forEach((id, dataTable) -> {
-            buf.writeIdentifier(id);
-            DataTable.writePacket(dataTable, buf);
-        });
+    public SyncPayload createSyncPacket() {
+        return new SyncPayload(dataTables);
     }
 
-    public void readPacket(PacketByteBuf buf) {
-        dataTables.clear();
-        int numDataTables = buf.readVarInt();
-        for (int i = 0; i < numDataTables; ++i) {
-            Identifier id = buf.readIdentifier();
-            DataTable dataTable = DataTable.fromPacket(buf);
-            dataTables.put(id, dataTable);
-        }
+    public void updateContents(Map<Identifier, DataTable> dataTables) {
+        this.dataTables.clear();
+        this.dataTables.putAll(dataTables);
         tagsResolved = true;
     }
 
