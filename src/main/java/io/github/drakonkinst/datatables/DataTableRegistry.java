@@ -150,9 +150,9 @@ public class DataTableRegistry extends JsonDataLoader implements
                     unresolvedTags = new Object2IntArrayMap<>();
                 }
                 String tag = key.substring(1);
-                unresolvedTags.put(new Identifier(tag), value);
+                unresolvedTags.put(Identifier.of(tag), value);
             } else {
-                entryTable.put(new Identifier(key), value);
+                entryTable.put(Identifier.of(key), value);
             }
         }
 
