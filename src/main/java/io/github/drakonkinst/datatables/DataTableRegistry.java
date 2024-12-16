@@ -1,7 +1,5 @@
 package io.github.drakonkinst.datatables;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import io.github.drakonkinst.datatables.json.JsonStack;
 import io.github.drakonkinst.datatables.json.JsonType;
@@ -16,24 +14,25 @@ import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.resource.JsonDataLoader;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.dynamic.Codecs;
 import net.minecraft.util.profiler.Profiler;
 import org.apache.commons.lang3.StringUtils;
 
-public class DataTableRegistry extends JsonDataLoader implements
+// TODO: This is quite hacky, should look into better solutions that parse DataTable directly later
+public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
         IdentifiableResourceReloadListener {
 
     public static final String RESOURCE_FOLDER = "data_tables";
     private static final DataTable DUMMY = new DataTable(DataTableType.MISC, 0,
             new Object2IntArrayMap<>(), null);
     private static final Identifier IDENTIFIER = DataTables.id(RESOURCE_FOLDER);
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final DataTableType[] DATA_TABLE_TYPES = DataTableType.values();
     public static DataTableRegistry INSTANCE;
     private final Map<Identifier, DataTable> dataTables = new HashMap<>();
     private boolean tagsResolved = false;
 
     public DataTableRegistry() {
-        super(GSON, RESOURCE_FOLDER);
+        super(Codecs.JSON_ELEMENT, RESOURCE_FOLDER);
         INSTANCE = this;
     }
 

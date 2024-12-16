@@ -80,17 +80,17 @@ public class DataTable {
     }
 
     private List<Identifier> resolveBlockTags() {
-        Registries.BLOCK.streamTagsAndEntries().forEach(tagKeyNamedPair -> {
-            Identifier tagId = tagKeyNamedPair.getFirst().id();
+        Registries.BLOCK.streamTags().forEach(tagEntry -> {
+            Identifier tagId = tagEntry.getTag().id();
             if (!unresolvedTags.containsKey(tagId)) {
                 return;
             }
 
             int value = unresolvedTags.getInt(tagId);
-            tagKeyNamedPair.getSecond().forEach(blockRegistryEntry -> {
+            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
                 Identifier blockId = Registries.BLOCK.getId(blockRegistryEntry.value());
                 entryTable.putIfAbsent(blockId, value);
-            });
+            }));
             unresolvedTags.removeInt(tagId);
         });
 
@@ -103,17 +103,17 @@ public class DataTable {
     }
 
     private List<Identifier> resolveEntityTypeTags() {
-        Registries.ENTITY_TYPE.streamTagsAndEntries().forEach(tagKeyNamedPair -> {
-            Identifier tagId = tagKeyNamedPair.getFirst().id();
+        Registries.ENTITY_TYPE.streamTags().forEach(tagEntry -> {
+            Identifier tagId = tagEntry.getTag().id();
             if (!unresolvedTags.containsKey(tagId)) {
                 return;
             }
 
             int value = unresolvedTags.getInt(tagId);
-            tagKeyNamedPair.getSecond().forEach(blockRegistryEntry -> {
+            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
                 Identifier entityId = Registries.ENTITY_TYPE.getId(blockRegistryEntry.value());
                 entryTable.putIfAbsent(entityId, value);
-            });
+            }));
             unresolvedTags.removeInt(tagId);
         });
 
@@ -126,17 +126,17 @@ public class DataTable {
     }
 
     private List<Identifier> resolveItemTags() {
-        Registries.ITEM.streamTagsAndEntries().forEach(tagKeyNamedPair -> {
-            Identifier tagId = tagKeyNamedPair.getFirst().id();
+        Registries.ITEM.getTags().forEach(tagEntry -> {
+            Identifier tagId = tagEntry.getTag().id();
             if (!unresolvedTags.containsKey(tagId)) {
                 return;
             }
 
             int value = unresolvedTags.getInt(tagId);
-            tagKeyNamedPair.getSecond().forEach(blockRegistryEntry -> {
+            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
                 Identifier itemId = Registries.ITEM.getId(blockRegistryEntry.value());
                 entryTable.putIfAbsent(itemId, value);
-            });
+            }));
             unresolvedTags.removeInt(tagId);
         });
 
