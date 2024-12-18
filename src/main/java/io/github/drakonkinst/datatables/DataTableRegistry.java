@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.minecraft.resource.JsonDataLoader;
+import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.dynamic.Codecs;
@@ -32,7 +33,7 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
     private boolean tagsResolved = false;
 
     public DataTableRegistry() {
-        super(Codecs.JSON_ELEMENT, RESOURCE_FOLDER);
+        super(Codecs.JSON_ELEMENT, ResourceFinder.json(RESOURCE_FOLDER));
         INSTANCE = this;
     }
 
