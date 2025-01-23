@@ -9,6 +9,9 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.item.Item;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Identifier;
 
 public class DataTable {
@@ -68,78 +71,34 @@ public class DataTable {
         }
 
         if (type == DataTableType.BLOCK) {
-            return resolveBlockTags();
+            loadTagEntries(Registries.BLOCK);
+        } else if (type == DataTableType.ENTITY) {
+            loadTagEntries(Registries.ENTITY_TYPE);
+        } else if (type == DataTableType.ITEM) {
+            loadTagEntries(Registries.ITEM);
         }
-        if (type == DataTableType.ENTITY) {
-            return resolveEntityTypeTags();
-        }
-        if (type == DataTableType.ITEM) {
-            return resolveItemTags();
-        }
-        return unresolvedTags.keySet().stream().toList();
+        return collectFailedTags();
     }
 
-    private List<Identifier> resolveBlockTags() {
-        Registries.BLOCK.streamTags().forEach(tagEntry -> {
-            Identifier tagId = tagEntry.getTag().id();
+    private <T> void loadTagEntries(Registry<T> registry) {
+        registry.streamTags().forEach(tagEntry -> {
+            TagKey<T> tag = tagEntry.getTag();
+            Identifier tagId = tag.id();
             if (!unresolvedTags.containsKey(tagId)) {
                 return;
             }
 
             int value = unresolvedTags.getInt(tagId);
-            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
-                Identifier blockId = Registries.BLOCK.getId(blockRegistryEntry.value());
-                entryTable.putIfAbsent(blockId, value);
-            }));
-            unresolvedTags.removeInt(tagId);
+            registry.getOptional(tag).ifPresentOrElse(entries -> {
+                for (RegistryEntry<T> registryEntry : entries) {
+                    Identifier id = registry.getId(registryEntry.value());
+                    entryTable.putIfAbsent(id, value);
+                }
+            }, () -> DataTables.LOGGER.warn("Failed to load key {}", tagId));
         });
-
-        List<Identifier> failedTags = null;
-        if (!unresolvedTags.isEmpty()) {
-            failedTags = unresolvedTags.keySet().stream().toList();
-        }
-        unresolvedTags = null;
-        return failedTags;
     }
 
-    private List<Identifier> resolveEntityTypeTags() {
-        Registries.ENTITY_TYPE.streamTags().forEach(tagEntry -> {
-            Identifier tagId = tagEntry.getTag().id();
-            if (!unresolvedTags.containsKey(tagId)) {
-                return;
-            }
-
-            int value = unresolvedTags.getInt(tagId);
-            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
-                Identifier entityId = Registries.ENTITY_TYPE.getId(blockRegistryEntry.value());
-                entryTable.putIfAbsent(entityId, value);
-            }));
-            unresolvedTags.removeInt(tagId);
-        });
-
-        List<Identifier> failedTags = null;
-        if (!unresolvedTags.isEmpty()) {
-            failedTags = unresolvedTags.keySet().stream().toList();
-        }
-        unresolvedTags = null;
-        return failedTags;
-    }
-
-    private List<Identifier> resolveItemTags() {
-        Registries.ITEM.getTags().forEach(tagEntry -> {
-            Identifier tagId = tagEntry.getTag().id();
-            if (!unresolvedTags.containsKey(tagId)) {
-                return;
-            }
-
-            int value = unresolvedTags.getInt(tagId);
-            tagEntry.getStorage().ifRight(list -> list.forEach(blockRegistryEntry -> {
-                Identifier itemId = Registries.ITEM.getId(blockRegistryEntry.value());
-                entryTable.putIfAbsent(itemId, value);
-            }));
-            unresolvedTags.removeInt(tagId);
-        });
-
+    private List<Identifier> collectFailedTags() {
         List<Identifier> failedTags = null;
         if (!unresolvedTags.isEmpty()) {
             failedTags = unresolvedTags.keySet().stream().toList();

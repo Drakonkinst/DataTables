@@ -48,27 +48,26 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
     }
 
     public DataTable get(Identifier id) {
-        if (!tagsResolved) {
-            DataTables.LOGGER.warn("Attempting to access data table " + id
-                    + " before tags are fully resolved, results may be inaccurate");
-        }
+        warnIfTagsUnresolved(id);
         return dataTables.getOrDefault(id, DUMMY);
     }
 
     public Optional<DataTable> getOptional(Identifier id) {
-        if (!tagsResolved) {
-            DataTables.LOGGER.warn("Attempting to access data table " + id
-                    + " before tags are fully resolved, results may be inaccurate");
-        }
+        warnIfTagsUnresolved(id);
         return Optional.ofNullable(dataTables.get(id));
     }
 
     public boolean contains(Identifier id) {
-        if (!tagsResolved) {
-            DataTables.LOGGER.warn("Attempting to access data table " + id
-                    + " before tags are fully resolved, results may be inaccurate");
-        }
+        warnIfTagsUnresolved(id);
         return dataTables.containsKey(id);
+    }
+
+    private void warnIfTagsUnresolved(Identifier id) {
+        if (!tagsResolved) {
+            DataTables.LOGGER.warn(
+                    "Attempting to access data table {} before tags are fully resolved, results may be inaccurate",
+                    id);
+        }
     }
 
     public Collection<Identifier> getDataTableIds() {
@@ -76,31 +75,31 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
     }
 
     public void resolveTags() {
-        if (tagsResolved) {
-            return;
-        }
-
         int numResolvedTables = 0;
+        boolean anyErrors = false;
         for (Map.Entry<Identifier, DataTable> entry : dataTables.entrySet()) {
             DataTable dataTable = entry.getValue();
             List<Identifier> failedTags = dataTable.resolveTags();
             if (failedTags != null && !failedTags.isEmpty()) {
                 if (dataTable.getType() == DataTableType.MISC) {
                     DataTables.LOGGER.warn(
-                            "Data table " + entry.getKey() + " is of type " + dataTable.getType()
-                                    + " and is unable to resolve tags. Specify a type to resolve.");
+                            "Data table {} is of type {} and is unable to resolve tags. Specify a type to resolve.",
+                            entry.getKey(), dataTable.getType());
                 } else {
                     DataTables.LOGGER.error(
-                            "Failed to resolve tags for data table " + entry.getKey()
-                                    + ": Unrecognized tags " + StringUtils.join(
+                            "Failed to resolve tags for data table {}: Unrecognized tags {}",
+                            entry.getKey(), StringUtils.join(
                                     failedTags.stream().map(Identifier::toString).toList()));
+                    anyErrors = true;
                 }
             } else {
                 numResolvedTables++;
             }
         }
-        DataTables.LOGGER.info("Resolved tags for " + numResolvedTables + " data tables");
-        tagsResolved = true;
+        DataTables.LOGGER.info("Resolved tags for {} data tables", numResolvedTables);
+        if (!anyErrors) {
+            tagsResolved = true;
+        }
     }
 
     @Override
@@ -118,7 +117,7 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
         tagsResolved = false;
         dataTables.clear();
         data.forEach(this::loadDataTable);
-        DataTables.LOGGER.info("Loaded " + dataTables.size() + " data tables");
+        DataTables.LOGGER.info("Loaded {} data tables", dataTables.size());
     }
 
     private void loadDataTable(Identifier dataTableId, JsonElement element) {
@@ -158,8 +157,8 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
 
         List<String> errors = jsonStack.getErrors();
         if (!errors.isEmpty()) {
-            DataTables.LOGGER.error(
-                    "Failed to parse data table " + dataTableId + ": " + StringUtils.join(errors));
+            DataTables.LOGGER.error("Failed to parse data table {}: {}", dataTableId,
+                    StringUtils.join(errors));
             return;
         }
 
@@ -167,9 +166,8 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
             DataTable existingDataTable = dataTables.get(dataTableId);
             if (existingDataTable.getType() != type) {
                 DataTables.LOGGER.warn(
-                        "Tried to override data table but data table types do not match: expected "
-                                + existingDataTable.getType().getName() + ", got "
-                                + type.getName());
+                        "Tried to override data table but data table types do not match: expected {}, got {}",
+                        existingDataTable.getType().getName(), type.getName());
                 return;
             }
             existingDataTable.merge(entryTable, unresolvedTags);
