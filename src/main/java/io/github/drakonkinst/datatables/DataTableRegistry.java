@@ -24,11 +24,12 @@ public class DataTableRegistry extends JsonDataLoader<JsonElement> implements
         IdentifiableResourceReloadListener {
 
     public static final String RESOURCE_FOLDER = "data_tables";
+    public static DataTableRegistry INSTANCE;
+
     private static final DataTable DUMMY = new DataTable(DataTableType.MISC, 0,
             new Object2IntArrayMap<>(), null);
     private static final Identifier IDENTIFIER = DataTables.id(RESOURCE_FOLDER);
     private static final DataTableType[] DATA_TABLE_TYPES = DataTableType.values();
-    public static DataTableRegistry INSTANCE;
     private final Map<Identifier, DataTable> dataTables = new HashMap<>();
     private boolean tagsResolved = false;
 
