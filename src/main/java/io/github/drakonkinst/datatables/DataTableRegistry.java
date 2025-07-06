@@ -131,7 +131,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
         clear();
         this.dataTables.putAll(dataTables);
         markResolved();
-        DataTables.LOGGER.info("Resolved {} data tables for client", this.dataTables.size());
+        DataTables.LOGGER.info("Synced {} data tables from server", this.dataTables.size());
     }
 
     public void setRegistries(@NotNull RegistryWrapper.WrapperLookup registries) {
