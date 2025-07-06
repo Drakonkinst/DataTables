@@ -31,7 +31,7 @@ public class TableCommand {
 
     public static final int PERMISSION_LEVEL_GAMEMASTER = 2;
     private static final SuggestionProvider<ServerCommandSource> SUGGESTION_PROVIDER = (context, builder) -> {
-        Collection<Identifier> dataTableIds = DataTableRegistry.INSTANCE.getDataTableIds();
+        Collection<Identifier> dataTableIds = DataTables.getDataTableIds();
         return CommandSource.suggestIdentifiers(dataTableIds.stream(), builder);
     };
     private static final DynamicCommandExceptionType UNKNOWN_TABLE_EXCEPTION = new DynamicCommandExceptionType(
@@ -64,7 +64,7 @@ public class TableCommand {
     }
 
     private static int executeList(CommandContext<ServerCommandSource> context) {
-        Collection<Identifier> dataTableIds = DataTableRegistry.INSTANCE.getDataTableIds();
+        Collection<Identifier> dataTableIds = DataTables.getDataTableIds();
         boolean first = true;
         StringBuilder str = new StringBuilder();
         for (Identifier id : dataTableIds) {
@@ -85,14 +85,13 @@ public class TableCommand {
     private static int executeGetBlock(CommandContext<ServerCommandSource> context)
             throws CommandSyntaxException {
         Identifier id = IdentifierArgumentType.getIdentifier(context, "data_table_id");
-        Optional<DataTable> table = DataTableRegistry.INSTANCE.getOptional(id);
+        Optional<DataTable> table = DataTables.getOptional(id);
         if (table.isEmpty()) {
             throw UNKNOWN_TABLE_EXCEPTION.create(id.toString());
         }
 
         BlockPos blockPos = BlockPosArgumentType.getLoadedBlockPos(context, "pos");
-        int value = table.get()
-                .getIntForBlock(context.getSource().getWorld().getBlockState(blockPos));
+        int value = table.get().query(context.getSource().getWorld().getBlockState(blockPos));
         context.getSource()
                 .sendFeedback(
                         () -> Text.translatable("commands.table.get.block", value, id.toString()),
@@ -103,13 +102,13 @@ public class TableCommand {
     private static int executeGetEntity(CommandContext<ServerCommandSource> context)
             throws CommandSyntaxException {
         Identifier id = IdentifierArgumentType.getIdentifier(context, "data_table_id");
-        Optional<DataTable> table = DataTableRegistry.INSTANCE.getOptional(id);
+        Optional<DataTable> table = DataTables.getOptional(id);
         if (table.isEmpty()) {
             throw UNKNOWN_TABLE_EXCEPTION.create(id.toString());
         }
 
         Entity entity = EntityArgumentType.getEntity(context, "target");
-        int value = table.get().getIntForEntity(entity);
+        int value = table.get().query(entity);
         context.getSource()
                 .sendFeedback(() -> Text.translatable("commands.table.get.entity",
                         entity.getDisplayName(), value, id.toString()), false);
@@ -119,7 +118,7 @@ public class TableCommand {
     private static int executeGetItemSlot(CommandContext<ServerCommandSource> context)
             throws CommandSyntaxException {
         Identifier id = IdentifierArgumentType.getIdentifier(context, "data_table_id");
-        Optional<DataTable> table = DataTableRegistry.INSTANCE.getOptional(id);
+        Optional<DataTable> table = DataTables.getOptional(id);
         if (table.isEmpty()) {
             throw UNKNOWN_TABLE_EXCEPTION.create(id.toString());
         }
@@ -129,7 +128,7 @@ public class TableCommand {
         if (stackReference == StackReference.EMPTY) {
             throw SLOT_NOT_FOUND.create();
         }
-        int value = table.get().getIntForItem(stackReference.get().getItem());
+        int value = table.get().query(stackReference.get().getItem());
         context.getSource()
                 .sendFeedback(
                         () -> Text.translatable("commands.table.get.item", value, id.toString()),
@@ -140,14 +139,14 @@ public class TableCommand {
     private static int executeGetItemId(CommandContext<ServerCommandSource> context)
             throws CommandSyntaxException {
         Identifier id = IdentifierArgumentType.getIdentifier(context, "data_table_id");
-        Optional<DataTable> table = DataTableRegistry.INSTANCE.getOptional(id);
+        Optional<DataTable> table = DataTables.getOptional(id);
         if (table.isEmpty()) {
             throw UNKNOWN_TABLE_EXCEPTION.create(id.toString());
         }
 
         ItemStackArgument stackArgument = ItemStackArgumentType.getItemStackArgument(context,
                 "item");
-        int value = table.get().getIntForItem(stackArgument.getItem());
+        int value = table.get().query(stackArgument.getItem());
         context.getSource()
                 .sendFeedback(
                         () -> Text.translatable("commands.table.get.item", value, id.toString()),

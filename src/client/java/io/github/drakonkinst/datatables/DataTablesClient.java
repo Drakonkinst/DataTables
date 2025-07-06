@@ -8,9 +8,7 @@ public class DataTablesClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientPlayNetworking.registerGlobalReceiver(SyncPayload.ID, ((payload, context) -> {
-            DataTableRegistry.INSTANCE.updateContents(payload.dataTables());
-            DataTables.LOGGER.info("Loaded " + DataTableRegistry.INSTANCE.getDataTableIds().size()
-                    + " data tables");
+            DataTables.syncDataTables(payload.dataTables());
         }));
     }
 }
