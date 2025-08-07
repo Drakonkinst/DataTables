@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.mojang.serialization.codecs.UnboundedMapCodec;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -14,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,8 +25,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
+import net.minecraft.block.Block;
+import net.minecraft.entity.EntityType;
+import net.minecraft.item.Item;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryOps;
 import net.minecraft.registry.RegistryWrapper;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceFinder;
 import net.minecraft.resource.ResourceManager;
@@ -42,10 +49,19 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
     private static final UnboundedMapCodec<TagEntryId, Integer> ENTRIES_CODEC = Codec.unboundedMap(
             Codecs.TAG_ENTRY_ID, Codec.INT);
     private static final Codec<List<Identifier>> PARENTS_CODEC = Identifier.CODEC.listOf();
-    private static final DataTable DUMMY = new DataTable(DataTableType.MISC, 0,
+    private static final DataTableType DEFAULT_DATA_TABLE_TYPE = DataTableType.MISC;
+    private static final int DEFAULT_DEFAULT_VALUE = 0;
+    private static final DataTable DUMMY = new DataTable(DEFAULT_DATA_TABLE_TYPE, DEFAULT_DEFAULT_VALUE,
             new Object2IntArrayMap<>(), new Object2IntArrayMap<>());
+    public static final Codec<DataTableEntry> DATA_TABLE_ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+           DataTableType.CODEC.optionalFieldOf("type", DEFAULT_DATA_TABLE_TYPE).forGetter(DataTableEntry::type),
+           PARENTS_CODEC.optionalFieldOf("parents", Collections.emptyList()).forGetter(DataTableEntry::parents),
+           Codec.INT.optionalFieldOf("default_value", DEFAULT_DEFAULT_VALUE).forGetter(DataTableEntry::defaultValue),
+           ENTRIES_CODEC.optionalFieldOf("entries", Collections.emptyMap()).forGetter(DataTableEntry::entries)
+    ).apply(instance, DataTableEntry::new));
+
     private final Map<Identifier, DataTable> dataTables = new HashMap<>();
-    private final Map<Identifier, UnresolvedTable> unresolved = new HashMap<>();
+    private final Map<Identifier, DataTableEntry> unresolved = new HashMap<>();
     @Nullable
     private RegistryWrapper.WrapperLookup registries;
     private boolean resolved = false;
@@ -70,7 +86,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
         this.resolved = true;
     }
 
-    private void loadIntoMap(ResourceManager manager, Map<Identifier, UnresolvedTable> map) {
+    private void loadIntoMap(ResourceManager manager, Map<Identifier, DataTableEntry> map) {
         ResourceFinder finder = ResourceFinder.json(RESOURCE_FOLDER);
 
         assert this.registries != null;
@@ -89,7 +105,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
 
                 JsonElement json = JsonParser.parseReader(reader);
 
-                JsonObject object = JsonHelper.asObject(json, "item_components");
+                JsonObject object = JsonHelper.asObject(json, "data_table");
 
                 int defaultValue = JsonHelper.getInt(object, "default_value", 0);
                 if (object.has("parents")) {
@@ -109,7 +125,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
                 }
 
                 map.put(resourceId,
-                        new UnresolvedTable(resourceId, type, parents, defaultValue, entries));
+                        new DataTableEntry(type, parents, defaultValue, entries));
             } catch (Exception exception) {
                 DataTables.LOGGER.error("Couldn't read data table {} from {} in data pack {}",
                         resourceId, resourcePath, resource.getPackId(), exception);
@@ -165,50 +181,51 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
 
     private static class Resolver {
 
-        private final Map<Identifier, UnresolvedTable> unresolved;
-        private final Map<Identifier, UnmergedTable> resolved = new HashMap<>();
+        private final Map<Identifier, DataTableEntry> unresolved;
+        private final Map<Identifier, DataTableEntry> resolved = new HashMap<>();
         private final Set<Identifier> toResolve = new HashSet<>();
 
-        Resolver(Map<Identifier, UnresolvedTable> unresolved) {
+        Resolver(Map<Identifier, DataTableEntry> unresolved) {
             this.unresolved = unresolved;
         }
 
         public void resolve(BiConsumer<Identifier, DataTable> dataTableConsumer) {
-            List<UnmergedTable> unmergedTables = new ArrayList<>();
+            Map<Identifier, DataTableEntry> dataTableEntries = new HashMap<>();
 
-            for (Entry<Identifier, UnresolvedTable> entry : this.unresolved.entrySet()) {
+            for (Entry<Identifier, DataTableEntry> entry : this.unresolved.entrySet()) {
                 try {
                     Identifier id = entry.getKey();
-                    UnresolvedTable unresolved = entry.getValue();
+                    DataTableEntry unresolved = entry.getValue();
                     if (unresolved.entries().isEmpty()) {
                         continue;
                     }
 
-                    UnmergedTable resolved = this.getOrResolve(id);
-                    unmergedTables.add(resolved);
+                    DataTableEntry resolved = this.getOrResolve(id);
+                    dataTableEntries.put(id, resolved);
                 } catch (Exception e) {
                     DataTables.LOGGER.error("Failed to load {}", entry.getKey(), e);
                 }
             }
 
-            for (UnmergedTable table : unmergedTables) {
+            for (Entry<Identifier, DataTableEntry> entry : dataTableEntries.entrySet()) {
+                DataTableEntry table = entry.getValue();
                 Object2IntMap<Identifier> elementEntryTable = new Object2IntOpenHashMap<>();
                 Object2IntMap<Identifier> tagEntryTable = new Object2IntOpenHashMap<>();
-                for (Entry<TagEntryId, Integer> entry : table.entries().entrySet()) {
-                    TagEntryId entryId = entry.getKey();
-                    if (entryId.tag()) {
-                        tagEntryTable.put(entryId.id(), entry.getValue().intValue());
+                for (Entry<TagEntryId, Integer> tableEntry : table.entries().entrySet()) {
+                    TagEntryId tableEntryId = tableEntry.getKey();
+                    if (tableEntryId.tag()) {
+                        tagEntryTable.put(tableEntryId.id(), tableEntry.getValue().intValue());
                     } else {
-                        elementEntryTable.put(entryId.id(), entry.getValue().intValue());
+                        elementEntryTable.put(tableEntryId.id(), tableEntry.getValue().intValue());
                     }
                 }
-                dataTableConsumer.accept(table.id(),
+                dataTableConsumer.accept(entry.getKey(),
                         new DataTable(table.type(), table.defaultValue(), elementEntryTable,
                                 tagEntryTable));
             }
         }
 
-        UnmergedTable getOrResolve(Identifier id) throws Exception {
+        DataTableEntry getOrResolve(Identifier id) throws Exception {
             if (this.resolved.containsKey(id)) {
                 return this.resolved.get(id);
             }
@@ -217,7 +234,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
                 throw new IllegalStateException("Circular reference while loading " + id);
             }
             this.toResolve.add(id);
-            UnresolvedTable unresolved = this.unresolved.get(id);
+            DataTableEntry unresolved = this.unresolved.get(id);
             if (unresolved == null) {
                 throw new FileNotFoundException(id.toString());
             }
@@ -225,7 +242,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
             Map<TagEntryId, Integer> entries = new HashMap<>();
             for (Identifier parentId : unresolved.parents()) {
                 try {
-                    UnmergedTable parent = this.getOrResolve(parentId);
+                    DataTableEntry parent = this.getOrResolve(parentId);
                     entries.putAll(parent.entries());
                 } catch (Exception e) {
                     DataTables.LOGGER.error("Unable to resolve parent {} referenced from {}",
@@ -234,7 +251,7 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
             }
 
             entries.putAll(unresolved.entries);
-            UnmergedTable resolved = new UnmergedTable(unresolved.id(), unresolved.type(),
+            DataTableEntry resolved = new DataTableEntry(unresolved.type(),
                     unresolved.parents(), unresolved.defaultValue(), entries);
 
             this.resolved.put(id, resolved);
@@ -244,10 +261,77 @@ public class DataTableRegistry implements SimpleSynchronousResourceReloadListene
         }
     }
 
-    protected record UnresolvedTable(Identifier id, DataTableType type, List<Identifier> parents,
-                                     int defaultValue, Map<TagEntryId, Integer> entries) {}
+    // Represents an unresolved or unmerged data table
+    public record DataTableEntry(DataTableType type, List<Identifier> parents,
+                                    int defaultValue, Map<TagEntryId, Integer> entries) {
 
-    protected record UnmergedTable(Identifier id, DataTableType type, List<Identifier> parents,
-                                   int defaultValue, Map<TagEntryId, Integer> entries) {}
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        public static class Builder {
+            private DataTableType type = DEFAULT_DATA_TABLE_TYPE;
+            private int defaultValue = DEFAULT_DEFAULT_VALUE;
+            private final List<Identifier> parents = new ArrayList<>();
+            private final Map<TagEntryId, Integer> entries = new HashMap<>();
+
+            public Builder() {
+            }
+
+            public Builder type(DataTableType type) {
+                this.type = type;
+                return this;
+            }
+
+            public Builder defaultValue(int value) {
+                this.defaultValue = value;
+                return this;
+            }
+
+            public Builder parent(Identifier id) {
+                parents.add(id);
+                return this;
+            }
+
+            public Builder parents(List<Identifier> ids) {
+                parents.addAll(ids);
+                return this;
+            }
+
+            public Builder entry(Identifier id, int value) {
+                entries.put(new TagEntryId(id, false), value);
+                return this;
+            }
+
+            public Builder entry(Item item, int value) {
+                Identifier id = Registries.ITEM.getId(item);
+                return entry(id, value);
+            }
+
+            public Builder entry(Block block, int value) {
+                Identifier id = Registries.BLOCK.getId(block);
+                return entry(id, value);
+            }
+
+            public Builder entry(EntityType<?> entityType, int value) {
+                Identifier id = EntityType.getId(entityType);
+                return entry(id, value);
+            }
+
+            public Builder tag(Identifier id, int value) {
+                entries.put(new TagEntryId(id, true), value);
+                return this;
+            }
+
+            public Builder tag(TagKey<?> tag, int value) {
+                Identifier id = tag.id();
+                return tag(id, value);
+            }
+
+            public DataTableEntry build() {
+                return new DataTableEntry(type, parents, defaultValue, entries);
+            }
+        }
+    }
 }
 

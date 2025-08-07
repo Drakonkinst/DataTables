@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
 import net.minecraft.registry.DefaultedRegistry;
 import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.StringIdentifiable;
 
 public enum DataTableType implements StringIdentifiable {
