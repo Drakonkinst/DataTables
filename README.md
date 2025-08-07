@@ -10,7 +10,7 @@ This is where data tables come in: allowing you to define key-value pairs in JSO
 
 As an example, we can make a data table that determines how "shiny" a certain block is.
 
-```json
+```hjson
 // my_mod_namespace/data_tables/shiny_blocks.json
 {
   "type": "block",
@@ -51,6 +51,10 @@ The `type` field determines how the tags specified in `entries` are resolved. It
 
 This field does not in any way enforce how this data table can be queried. A `block` type data table can still be queried using an item identifier, which can be useful if you only want to define one data table for both blocks and items.
 
+### `parents`
+
+The `parents` field can be used to include one or more parent data tables which will be merged into this data table. This is useful when trying to extend a data table or merge multiple together.
+
 ## Setup
 
 The server running the data pack must have this mod installed to be able to parse data tables. Clients do not need this mod installed usually, but it can be installed on client-side which will make data tables sync with the client. This can be useful if you have client-side code that relies on data tables.
@@ -85,7 +89,7 @@ You can add this mod as a dependency in your Fabric mod project, which allows yo
 
 Like data pack creators, you can define data tables manually in your mod's data folder to be included with your mod's data pack. However, you also have the option to use **data generation** to generate the data table using code.
 
-To do this, create a class that extends `DataTableEntryProvider` and implement the `accept` method. The consumer requires an identifier (the namespace and name of the data table) as well as a `DataTableEntry`, which has a Builder class that can be accessed with `DataTableEntry.builder()` which allows for easy creation of data tables in code. Set the type and default value with `.type()` and `.defaultValue()` respectively, and add entries with `.entry()` or tags with `.tag()`. Finally, call `build()` to construct the DataTableEntry object.
+To do this, create a class that extends `DataTableEntryProvider` and implement the `accept` method. The consumer requires an identifier (the namespace and name of the data table) as well as a `DataTableEntry`, which has a Builder class that can be accessed with `DataTableEntry.builder()` which allows for easy creation of data tables in code. Set the type and default value with `.type()` and `.defaultValue()` respectively, set parents with `.parents()` or `.parent()`, and add entries with `.entry()` or tags with `.tag()`. Finally, call `build()` to construct the DataTableEntry object.
 
 Then in your `onInitializeDataGenerator` method in your main data generation entrypoint, make sure to call `pack.addProvider()` and add your data table generator class.
 
